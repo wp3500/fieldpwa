@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Field Service Job Sheet</title>
+
+<link rel="manifest" href="manifest.json">
+
+
+<style>
+/* ===== Global Styles ===== */
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Arial Narrow',Arial,sans-serif;}
+body{background:#e1e3e6;color:#1c1c1c;line-height:1.35;font-size:12px;}
+button{
+  cursor:pointer;
+  border:none;
+  border-radius:6px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:600;
+  background: linear-gradient(145deg, #7a8a99, #4d5a65);
+  color:#f0f0f0;
+  transition:.2s;
+  box-shadow:0 2px 4px rgba(0,0,0,0.25);
+}
+button:hover{
+  background: linear-gradient(145deg, #9aa7b3, #606c78);
+}
+input,textarea,select{
+  border:1px solid #999;
+  border-radius:4px;
+  padding:4px;
+  font-size:12px;
+  width:100%;
+  outline:none;
+  background:#f5f5f5;
+  color:#1c1c1c;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:#4d5a65;
+  box-shadow:0 0 4px rgba(77,90,101,.5);
+}
+textarea{resize:none;overflow:hidden}
+
+/* ===== Containers ===== */
+.container{max-width:700px;margin:auto;padding:8px}
+.box{
+  background:#d1d5da;
+  border-radius:8px;
+  padding:6px;
+  margin-bottom:6px;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,0.2), 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* ===== Landing ===== */
+#landing{display:flex;flex-direction:column;gap:6px}
+#landing button{width:100%}
+
+/* ===== Job Sheet ===== */
+#jobSheet{display:none;flex-direction:column;gap:6px}
+#topFields{display:flex;gap:6px;flex-wrap:wrap}
+#address{flex:1 1 48%;font-size:10pt;background:#e9ecef;color:#1c1c1c}
+#jobMeta{flex:1 1 48%;display:flex;flex-direction:column;gap:4px}
+#jobMeta input{font-size:10pt;background:#e9ecef;color:#1c1c1c}
+
+/* ===== Summaries ===== */
+#summaries{display:flex;flex-direction:column;gap:4px;font-size:10pt}
+#summaries > div{font-weight:bold;}
+#summaryRow{display:flex;gap:6px;flex-wrap:nowrap;align-items:flex-start}
+
+#inventorySummary,
+#dueTestSummary,
+#dueTestLocations {
+  flex:0 0 auto;
+  width:max-content;
+  max-width:245px;
+  background:#cfd6dc;
+  padding:4px;
+  border-radius:6px;
+  white-space: pre-line;
+  word-break: break-word;
+  box-shadow:inset 0 0 0 1px rgba(77,90,101,.2);
+  color:#1c1c1c;
+}
+#inventorySummary, #dueTestSummary, #dueTestLocations { font-size:7pt; }
+
+#notes{
+  background:#cfd6dc;
+  padding:4px;
+  border-radius:6px;
+  font-weight:normal;
+  box-shadow:inset 0 0 0 1px rgba(77,90,101,.1);
+}
+#notes textarea{font-size:10pt;background:#e9ecef;color:#1c1c1c}
+
+/* ===== Unit Table (tight) ===== */
+#unitLocationsSection{overflow-x:auto;}
+#unitLocationsSection table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:9pt;
+  min-width:700px;
+  background:#e3e6ea;
+}
+thead th{padding:3px 4px;font-weight:bold;color:#2c3e50;background:#b0b8bf}
+tbody td{padding:1px 3px;background:#e3e6ea}
+#unitLocationsSection input,#unitLocationsSection select{padding:2px 3px;font-size:9pt;height:20px;background:#f5f5f5;color:#1c1c1c}
+.unit-input{width:50px;text-align:center;text-transform:uppercase}
+.location-input, .workdone-input{width:300px;font-size:9pt;overflow-x:auto;white-space:nowrap;display:block}
+.date-input{width:80px;font-size:9pt}
+.row-btn{background:#c0392b;font-size:9pt;padding:2px 6px;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,0.2)}
+.add-row-btn{margin-top:4px;background:#2980b9;font-size:10pt;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,0.2)}
+.row-number{font-size:8pt;color:#333;text-align:center}
+
+/* ===== Saved ===== */
+#savedSheets{display:none;flex-direction:column;gap:6px}
+.saved-item{
+  background:#d1d5da;
+  padding:6px;
+  border-radius:6px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:0 2px 4px rgba(0,0,0,0.2);
+}
+.saved-item button{margin-left:4px;}
+.back-btn{background:#7f8c8d;margin-bottom:6px;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,0.2)}
+
+/* ===== Save Toast ===== */
+#saveNotification{
+  position:fixed;
+  top:-40px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#27ae60;
+  color:#fff;
+  padding:6px 14px;
+  border-radius:6px;
+  font-weight:600;
+  opacity:0;
+  transition:.3s;
+  z-index:9999;
+  box-shadow:0 0 12px rgba(46,204,113,.5);
+}
+#saveNotification.show{top:10px;opacity:1}
+
+/* ===== Cert Page ===== */
+#certPage{
+  display:none;
+  flex-direction:column;
+  gap:10px;
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  text-align:center;
+}
+#certPage img{max-width:150px; max-height:80px; margin-bottom:10px;}
+#certPage .cert-section{margin-bottom:12px;}
+#certPage label{display:block;font-weight:bold;margin-bottom:4px;}
+#certPage input, #certPage textarea, #certPage div{font-size:12pt;text-align:center;margin-bottom:4px;}
+
+/* ===== Print ===== */
+@media print{
+#saveSheetBtn,#exportPDFBtn,.add-row-btn,.row-btn,.back-btn,thead th:last-child,#certBtn{display:none!important}
+table{font-size:8.5pt!important}
+select.unit-input{appearance:none;-webkit-appearance:none;-moz-appearance:none}
+}
+
+</style>
+</head>
+
+<body>
+
+<script src="jspdf.umd.min.js"></script>
+
+
+<div id="saveNotification">Saved</div>
+
+<div class="container">
+
+<!-- Landing -->
+<div id="landing">
+<button id="createSheetBtn">Create Job Sheet</button>
+<button id="savedSheetsBtn">Saved Job Sheets</button>
+</div>
+
+<!-- Job Sheet -->
+<div id="jobSheet">
+<button class="back-btn" id="backToLanding1">← Back</button>
+
+<div class="box" id="topFields">
+<textarea id="address" placeholder="Address"></textarea>
+<div id="jobMeta">
+<input id="jobNumber" placeholder="Job Number" />
+<input id="amcPO" placeholder="AMC PO" />
+</div>
+<div class="form-group">
+  <label for="jobDate">Job Date</label>
+  <input type="date" id="jobDate" class="input-field" placeholder="Select Job Date">
+</div>
+</div>
+
+<div class="box" id="summaries">
+  <div id="summaryRow">
+    <div id="inventorySummary">Inventory Summary</div>
+    <div id="dueTestLocations">Due Test Locations</div>
+    <div id="dueTestSummary">DT Total</div>
+  </div>
+
+  <div id="notes">
+    <textarea id="additionalNotes" placeholder="Additional Notes"></textarea>
+  </div>
+</div>
+
+<div class="box" id="unitLocationsSection">
+<table id="unitTable">
+<thead>
+<tr><th>#</th><th>Unit</th><th>Location</th><th>Date</th><th>Work Done</th><th>Action</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+<button class="add-row-btn" id="addRowBtn">Add Row</button>
+</div>
+
+<button id="saveSheetBtn">Save Job Sheet</button>
+<button id="exportPDFBtn">Export to PDF</button>
+<button id="certBtn">Cert</button>
+
+<!-- Cert Page -->
+<div id="certPage">
+  <div class="cert-section">
+    <label>Company Logo:</label>
+    <input type="file" id="certLogoUpload" accept="image/*">
+    <img id="certLogoPreview" src="" alt="Logo Preview">
+  </div>
+  <div class="cert-section">
+    <label>Address:</label>
+    <div id="certAddress"></div>
+    <label>Date of Service:</label>
+    <div id="certServiceDate"></div>
+    <label>Next Service Date:</label>
+    <div id="certNextServiceDate"></div>
+  </div>
+  <div class="cert-section">
+    <div id="certQuantities">Extinguishers: 0 / FB: 0</div>
+  </div>
+  <div class="cert-section">
+    <label>Technician:</label>
+    <input type="text" id="certTechnician">
+    <label>Duty of Care:</label>
+    <textarea id="certDutyOfCare" rows="3"></textarea>
+  </div>
+</div>
+
+</div>
+
+<!-- Saved Sheets -->
+<div id="savedSheets">
+<button class="back-btn" id="backToLanding2">← Back</button>
+<div id="savedList"></div>
+</div>
+
+</div>
+
+<script>
+/* ===== Navigation ===== */
+const landing=document.getElementById('landing');
+const jobSheet=document.getElementById('jobSheet');
+const savedSheetsPage=document.getElementById('savedSheets');
+const createSheetBtn=document.getElementById('createSheetBtn');
+const savedSheetsBtn=document.getElementById('savedSheetsBtn');
+const backToLanding1=document.getElementById('backToLanding1');
+const backToLanding2=document.getElementById('backToLanding2');
+
+createSheetBtn.onclick=()=>{landing.style.display='none';jobSheet.style.display='flex'};
+savedSheetsBtn.onclick=()=>{landing.style.display='none';savedSheetsPage.style.display='flex';renderSavedSheets()};
+backToLanding1.onclick=()=>{jobSheet.style.display='none';landing.style.display='flex'};
+backToLanding2.onclick=()=>{savedSheetsPage.style.display='none';landing.style.display='flex'};
+
+/* ===== Auto-resize Textareas ===== */
+const addressTA=document.getElementById('address');
+const notesTA=document.getElementById('additionalNotes');
+function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
+[addressTA,notesTA].forEach(t=>t.addEventListener('input',()=>autoResize(t)));
+
+/* ===== Save Toast ===== */
+const saveNotification=document.getElementById('saveNotification');
+function showSaveNotification(){
+  saveNotification.classList.add('show');
+  setTimeout(()=>saveNotification.classList.remove('show'),1000);
+}
+
+/* ===== Table & Summaries ===== */
+const unitTableBody=document.querySelector('#unitTable tbody');
+const workOptions=[
+"Serviced","Due Test Awaiting Approval","Due Test Replaced","Due Test Replaced with 9W",
+"Due Test Replaced with 6W","Due Test Replaced with 6F","Due Test Replaced with 5C","Due Test Replaced with 2C",
+"Due Test Customer Request Not to Change","Corroded / Damaged Replaced","Corroded / Damaged","Missing",
+"Missing Replaced","Bracket","Wooden Board","Due Test Replaced with 4P","Due Test Replaced with 6P",
+"Due Test Replaced with 2P","Due Test Replaced with 1P","Due Test Replaced with 9P","Due Test Replaced with 3WCH",
+"Due Test Replaced with 6WCH","FB Expired Replaced","FB Expired","NEW 6W","NEW 9W","NEW 6F","NEW 2C",
+"NEW 5C","NEW 6P","NEW 4P","NEW FB","NEW 1P","NEW 2P","NEW 6WCH","NEW 3WCH","NEW 9P"
+];
+const unitList=["2C","5C","1P","2P","3P","4P","6P","9P","2F","1F","6F","9F","3W","6W","9W","3WC","6WC","FB"];
+let previousDates=[];
+
+function updateRowNumbers(){
+  [...unitTableBody.rows].forEach((r,i)=>{ r.cells[0].innerHTML = `<span class="row-number">${i+1}</span>`; });
+}
+
+/* ===== Add Row ===== */
+document.getElementById('addRowBtn').onclick = () => {
+  const r = document.createElement('tr');
+  r.innerHTML = `<td></td>
+  <td>
+    <select class="unit-input">
+      <option value="">--</option>
+      ${unitList.map(u=>`<option value="${u}">${u}</option>`).join('')}
+    </select>
+  </td>
+  <td><input class="location-input" placeholder="Location"></td>
+  <td><input type="text" class="date-input"></td>
+  <td>
+    <select class="workdone-input">${workOptions.map(w=>`<option>${w}</option>`).join('')}</select>
+  </td>
+  <td>
+    <button class="row-btn">❌</button>
+  </td>`;
+  unitTableBody.appendChild(r);
+
+  r.querySelector('.row-btn').onclick = () => { r.remove(); updateRowNumbers(); updateSummaries(); };
+  r.querySelectorAll('input,select').forEach(i=>i.oninput=updateSummaries);
+
+  updateRowNumbers();
+  setupDateAutocomplete();
+};
+
+/* ===== Date autocomplete ===== */
+function setupDateAutocomplete(){
+  const dateInputs = document.querySelectorAll('.date-input');
+  dateInputs.forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const val = input.value.toLowerCase();
+      const suggestion = previousDates.find(d=>d.toLowerCase().startsWith(val));
+      if(suggestion) input.value = suggestion;
+    });
+  });
+}
+
+/* ===== Summaries ===== */
+function updateSummaries(){
+  const rows=[...unitTableBody.rows];
+  let tamperSeal=0,oRing=0,gaugeDot=0;
+  const dueTestCount={},dueTestLocs=[];
+
+  rows.forEach(r=>{
+    const unit=r.cells[1].querySelector('select').value;
+    const loc=r.cells[2].querySelector('input').value;
+    const work=r.cells[4].querySelector('select').value;
+    if(!unit)return;
+
+    const tamperUnits=["2C","5C","1P","2P","3P","4P","6P","9P","2F","1F","6F","9F","3W","6W","9W","3WC","6WC"];
+    const oRingUnits=["2C"];
+    const gaugeDotUnits=["1P","2P","3P","4P","6P","9P","2F","1F","6F","9F","3W","6W","9W","3WC","6WC"];
+
+    if(tamperUnits.includes(unit)&&unit!=="FB")tamperSeal++;
+    if(oRingUnits.includes(unit))oRing++;
+    if(gaugeDotUnits.includes(unit)&&!["2C","5C","FB"].includes(unit))gaugeDot++;
+
+    if(work.toLowerCase().includes("due test")){
+      dueTestCount[unit]=(dueTestCount[unit]||0)+1;
+      dueTestLocs.push(`${unit} - ${loc}`);
+    }
+  });
+
+  document.getElementById('inventorySummary').innerText=
+  `Inventory Summary
+Tamper Seals: ${tamperSeal}
+O-Rings: ${oRing}
+Gauge Dots: ${gaugeDot}`;
+
+  document.getElementById('dueTestSummary').innerText=
+  `DT Total:
+${Object.entries(dueTestCount).map(([u,c])=>`${u}: ${c}`).join('\n')||'None'}`;
+
+  document.getElementById('dueTestLocations').innerText=
+  `Due Test Locations
+${dueTestLocs.join('\n')||'None'}`;
+}
+
+/* ===== Save Job Sheet ===== */
+document.getElementById('saveSheetBtn').onclick = () => {
+  const savedSheets = JSON.parse(localStorage.getItem('savedSheets')||'[]');
+  const sheetData = {
+    address:addressTA.value,
+    jobNumber:document.getElementById('jobNumber').value,
+    amcPO:document.getElementById('amcPO').value,
+    notes:notesTA.value,
+    jobDate:document.getElementById('jobDate').value,
+    units:[...unitTableBody.rows].map(r=>({
+      unit:r.cells[1].querySelector('select').value,
+      location:r.cells[2].querySelector('input').value,
+      date:r.cells[3].querySelector('input').value,
+      work:r.cells[4].querySelector('select').value
+    }))
+  };
+  savedSheets.push(sheetData);
+  localStorage.setItem('savedSheets',JSON.stringify(savedSheets));
+  showSaveNotification();
+};
+
+/* ===== Render Saved Sheets ===== */
+function renderSavedSheets(){
+  const savedList=document.getElementById('savedList');
+  savedList.innerHTML='';
+  const savedSheets = JSON.parse(localStorage.getItem('savedSheets')||'[]');
+  savedSheets.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.className='saved-item';
+    div.innerHTML=`<span>${s.jobNumber||'No Job Number'} - ${s.address||'No Address'}</span>
+    <div>
+      <button onclick="loadSavedSheet(${i})">Load</button>
+      <button onclick="deleteSavedSheet(${i})">Delete</button>
+    </div>`;
+    savedList.appendChild(div);
+  });
+}
+
+function deleteSavedSheet(idx){
+  const savedSheets = JSON.parse(localStorage.getItem('savedSheets')||'[]');
+  savedSheets.splice(idx,1);
+  localStorage.setItem('savedSheets',JSON.stringify(savedSheets));
+  renderSavedSheets();
+}
+
+/* ===== Load Saved Sheet ===== */
+function loadSavedSheet(idx){
+  const savedSheets = JSON.parse(localStorage.getItem('savedSheets')||'[]');
+  const s=savedSheets[idx];
+  if(!s)return;
+
+  savedSheetsPage.style.display='none';
+  jobSheet.style.display='flex';
+
+  addressTA.value=s.address;
+  document.getElementById('jobNumber').value=s.jobNumber;
+  document.getElementById('amcPO').value=s.amcPO;
+  notesTA.value=s.notes;
+  document.getElementById('jobDate').value = s.jobDate || '';
+
+  unitTableBody.innerHTML='';
+  s.units.forEach(u=>{
+    const r=document.createElement('tr');
+    r.innerHTML=`<td></td>
+    <td><select class="unit-input"><option value="">--</option>${unitList.map(ul=>`<option ${ul===u.unit?'selected':''}>${ul}</option>`)}</select></td>
+    <td><input class="location-input" value="${u.location}"></td>
+    <td><input type="text" class="date-input" value="${u.date}"></td>
+    <td><select class="workdone-input">${workOptions.map(w=>`<option ${w===u.work?'selected':''}>${w}</option>`)}</select></td>
+    <td><button class="row-btn">❌</button></td>`;
+    unitTableBody.appendChild(r);
+    r.querySelector('.row-btn').onclick = () => { r.remove(); updateRowNumbers(); updateSummaries(); };
+    r.querySelectorAll('input,select').forEach(i=>i.oninput=updateSummaries);
+  });
+
+  updateRowNumbers();
+  updateSummaries();
+  setupDateAutocomplete();
+}
+
+/* ===== Cert Page ===== */
+const certBtn=document.getElementById('certBtn');
+const certPage=document.getElementById('certPage');
+const certAddress=document.getElementById('certAddress');
+const certServiceDate=document.getElementById('certServiceDate');
+const certNextServiceDate=document.getElementById('certNextServiceDate');
+const certQuantities=document.getElementById('certQuantities');
+const certLogoUpload=document.getElementById('certLogoUpload');
+const certLogoPreview=document.getElementById('certLogoPreview');
+
+certLogoUpload.onchange=(e)=>{
+  const file=e.target.files[0];
+  if(file){
+    const reader=new FileReader();
+    reader.onload=function(ev){certLogoPreview.src=ev.target.result;}
+    reader.readAsDataURL(file);
+  }
+};
+
+certBtn.onclick=()=>{
+  certPage.style.display = certPage.style.display==='flex'?'none':'flex';
+  if(certPage.style.display==='flex'){
+    certAddress.textContent=addressTA.value;
+
+    const jobDateInput = document.getElementById('jobDate').value;
+    if(jobDateInput){
+      const dateObj = new Date(jobDateInput);
+      const options={day:'numeric',month:'short',year:'numeric'};
+      certServiceDate.textContent = dateObj.toLocaleDateString('en-GB',options).replace(/ /g,' ');
+      const nextYear = new Date(dateObj);
+      nextYear.setFullYear(nextYear.getFullYear()+1);
+      certNextServiceDate.textContent = nextYear.toLocaleDateString('en-GB',options).replace(/ /g,' ');
+    } else {
+      certServiceDate.textContent='';
+      certNextServiceDate.textContent='';
+    }
+
+    // Extinguishers / FB
+    const rows=[...unitTableBody.rows];
+    let extinguishers=0, fb=0;
+    rows.forEach(r=>{
+      const unit=r.cells[1].querySelector('select').value;
+      if(unit==='FB') fb++;
+      else if(unit) extinguishers++;
+    });
+    certQuantities.textContent=`Extinguishers: ${extinguishers} / FB: ${fb}`;
+  }
+};
+
+/* ===== Export PDF ===== */
+document.getElementById('exportPDFBtn').onclick = () => {
+  const pdf = new jspdf.jsPDF('p', 'mm', 'a4'); // portrait, mm units, A4
+
+  // Title
+  pdf.setFontSize(16);
+  pdf.text('Field Service Job Sheet', 105, 20, { align: 'center' });
+
+  // Job info
+  pdf.setFontSize(12);
+  pdf.text(`Job Number: ${document.getElementById('jobNumber').value}`, 20, 40);
+  pdf.text(`AMC PO: ${document.getElementById('amcPO').value}`, 20, 50);
+  pdf.text(`Address: ${document.getElementById('address').value}`, 20, 60);
+  pdf.text(`Job Date: ${document.getElementById('jobDate').value}`, 20, 70);
+
+  // Table of units
+  const startY = 80;
+  const rows = [...unitTableBody.rows].map((r,i)=>[
+    i+1,
+    r.cells[1].querySelector('select').value,
+    r.cells[2].querySelector('input').value,
+    r.cells[3].querySelector('input').value,
+    r.cells[4].querySelector('select').value
+  ]);
+
+  if(rows.length){
+    pdf.autoTable({
+      startY,
+      head: [['#','Unit','Location','Date','Work Done']],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: [100, 100, 100] },
+      bodyStyles: { fontSize: 10 },
+    });
+  }
+
+  // Additional notes
+  const notesY = pdf.lastAutoTable ? pdf.lastAutoTable.finalY + 10 : startY + 10;
+  pdf.text('Additional Notes:', 20, notesY);
+  pdf.text(document.getElementById('additionalNotes').value, 20, notesY + 10);
+
+  // Save PDF
+  pdf.save(`JobSheet_${Date.now()}.pdf`);
+};
+
+
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./service-worker.js');
+}
+</script>
+
+</body>
+</html>
