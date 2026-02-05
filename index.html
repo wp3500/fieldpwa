@@ -525,8 +525,6 @@ document.getElementById('exportPDFBtn').onclick = () => {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  let margin = 20;
   let currentY = 20;
 
   // ===== Title =====
@@ -544,27 +542,43 @@ document.getElementById('exportPDFBtn').onclick = () => {
   const address = document.getElementById('address').value || '';
   const jobDate = document.getElementById('jobDate').value || '';
 
-  pdf.text(`Job Number: ${jobNumber}`, margin, currentY);
+  pdf.text(`Job Number: ${jobNumber}`, 20, currentY);
   currentY += 7;
-  pdf.text(`AMC PO: ${amcPO}`, margin, currentY);
+  pdf.text(`AMC PO: ${amcPO}`, 20, currentY);
   currentY += 7;
 
-  const addressLines = pdf.splitTextToSize(`Address: ${address}`, pageWidth - 2 * margin);
-  pdf.text(addressLines, margin, currentY);
+  const addressLines = pdf.splitTextToSize(`Address: ${address}`, pageWidth - 40);
+  pdf.text(addressLines, 20, currentY);
   currentY += addressLines.length * 7;
 
-  pdf.text(`Job Date: ${jobDate}`, margin, currentY);
+  pdf.text(`Job Date: ${jobDate}`, 20, currentY);
   currentY += 12;
 
-  // ===== Unit Table =====
-const rows = [...unitTableBody.rows].map((r, i) => [
-  i + 1,
-  (r.cells[1].querySelector('select')?.value || '').toString(),
-  (r.cells[2].querySelector('input')?.value || '').toString(),
-  (r.cells[3].querySelector('input')?.value || '').toString(),
-  (r.cells[4].querySelector('select')?.value || '').toString()
-]);
+  // ===== Summaries =====
+  const inventoryText = document.getElementById('inventorySummary').innerText || '';
+  const dueLocationsText = document.getElementById('dueTestLocations').innerText || '';
+  const dueTotalText = document.getElementById('dueTestSummary').innerText || '';
 
+  pdf.setFont(undefined, 'bold');
+  pdf.text('Summaries:', 20, currentY);
+  currentY += 7;
+
+  pdf.setFont(undefined, 'normal');
+  [inventoryText, dueLocationsText, dueTotalText].forEach(txt => {
+    const lines = pdf.splitTextToSize(txt, pageWidth - 40);
+    pdf.text(lines, 20, currentY);
+    currentY += lines.length * 7;
+  });
+  currentY += 5;
+
+  // ===== Unit Table =====
+  const rows = [...unitTableBody.rows].map((r, i) => [
+    i + 1,
+    r.cells[1].querySelector('select').value,
+    r.cells[2].querySelector('input').value,
+    r.cells[3].querySelector('input').value,
+    r.cells[4].querySelector('select').value
+  ]);
 
   if (rows.length) {
     pdf.autoTable({
@@ -577,12 +591,11 @@ const rows = [...unitTableBody.rows].map((r, i) => [
       columnStyles: {
         0: { halign: 'center', cellWidth: 10 },
         1: { halign: 'center', cellWidth: 20 },
-        2: { cellWidth: 70 }, // wider for location
+        2: { cellWidth: 60 },
         3: { halign: 'center', cellWidth: 25 },
-        4: { cellWidth: 50 }, // work done
+        4: { cellWidth: 50 },
       },
-      styles: { overflow: 'linebreak', cellPadding: 2 },
-      margin: { left: margin, right: margin },
+      styles: { overflow: 'linebreak' },
     });
     currentY = pdf.lastAutoTable.finalY + 10;
   }
@@ -590,22 +603,54 @@ const rows = [...unitTableBody.rows].map((r, i) => [
   // ===== Additional Notes =====
   const notes = document.getElementById('additionalNotes').value || '';
   if (notes.trim()) {
-    if (currentY > pageHeight - 40) pdf.addPage(), currentY = margin;
-
-    pdf.setFontSize(12);
     pdf.setFont(undefined, 'bold');
-    pdf.text('Additional Notes:', margin, currentY);
+    pdf.text('Additional Notes:', 20, currentY);
     currentY += 7;
 
     pdf.setFont(undefined, 'normal');
-    const noteLines = pdf.splitTextToSize(notes, pageWidth - 2 * margin);
-    pdf.text(noteLines, margin, currentY);
+    const noteLines = pdf.splitTextToSize(notes, pageWidth - 40);
+    pdf.text(noteLines, 20, currentY);
+    currentY += noteLines.length * 7 + 5;
+  }
+
+  // ===== Cert Page =====
+  if (certPage.style.display === 'flex') {
+    currentY += 5;
+
+    // Logo
+    if (certLogoPreview.src) {
+      const imgProps = pdf.getImageProperties(certLogoPreview.src);
+      const imgWidth = 60;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      pdf.addImage(certLogoPreview.src, 'PNG', (pageWidth - imgWidth) / 2, currentY, imgWidth, imgHeight);
+      currentY += imgHeight + 5;
+    }
+
+    pdf.setFont(undefined, 'bold');
+    pdf.setFontSize(12);
+    pdf.text('Certificate Details:', 20, currentY);
+    currentY += 7;
+
+    pdf.setFont(undefined, 'normal');
+    const certLines = [
+      `Address: ${certAddress.textContent}`,
+      `Service Date: ${certServiceDate.textContent}`,
+      `Next Service Date: ${certNextServiceDate.textContent}`,
+      `${certQuantities.textContent}`,
+      `Technician: ${document.getElementById('certTechnician').value || ''}`,
+      `Duty of Care: ${document.getElementById('certDutyOfCare').value || ''}`
+    ];
+
+    certLines.forEach(line => {
+      const wrapped = pdf.splitTextToSize(line, pageWidth - 40);
+      pdf.text(wrapped, 20, currentY);
+      currentY += wrapped.length * 7;
+    });
   }
 
   // ===== Save PDF =====
   pdf.save(`JobSheet_${Date.now()}.pdf`);
 };
-
 
 </script>
 
