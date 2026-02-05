@@ -175,6 +175,7 @@ select.unit-input{appearance:none;-webkit-appearance:none;-moz-appearance:none}
 <body>
 
 <script src="jspdf.umd.min.js"></script>
+<script src="jspdf.plugin.autotable.min.js"></script>
 
 
 <div id="saveNotification">Saved</div>
@@ -521,46 +522,84 @@ certBtn.onclick=()=>{
 
 /* ===== Export PDF ===== */
 document.getElementById('exportPDFBtn').onclick = () => {
-  const pdf = new jspdf.jsPDF('p', 'mm', 'a4'); // portrait, mm units, A4
+  const { jsPDF } = window.jspdf; // For jspdf.umd.min.js
+  const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait, mm, A4
 
-  // Title
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  let currentY = 20;
+
+  // ===== Title =====
   pdf.setFontSize(16);
-  pdf.text('Field Service Job Sheet', 105, 20, { align: 'center' });
+  pdf.setFont(undefined, 'bold');
+  pdf.text('Field Service Job Sheet', pageWidth / 2, currentY, { align: 'center' });
 
-  // Job info
+  currentY += 10;
+
+  // ===== Job Info =====
   pdf.setFontSize(12);
-  pdf.text(`Job Number: ${document.getElementById('jobNumber').value}`, 20, 40);
-  pdf.text(`AMC PO: ${document.getElementById('amcPO').value}`, 20, 50);
-  pdf.text(`Address: ${document.getElementById('address').value}`, 20, 60);
-  pdf.text(`Job Date: ${document.getElementById('jobDate').value}`, 20, 70);
+  pdf.setFont(undefined, 'normal');
 
-  // Table of units
-  const startY = 80;
-  const rows = [...unitTableBody.rows].map((r,i)=>[
-    i+1,
+  const jobNumber = document.getElementById('jobNumber').value || '';
+  const amcPO = document.getElementById('amcPO').value || '';
+  const address = document.getElementById('address').value || '';
+  const jobDate = document.getElementById('jobDate').value || '';
+
+  pdf.text(`Job Number: ${jobNumber}`, 20, currentY);
+  currentY += 7;
+  pdf.text(`AMC PO: ${amcPO}`, 20, currentY);
+  currentY += 7;
+
+  // Wrap address text if too long
+  const addressLines = pdf.splitTextToSize(`Address: ${address}`, pageWidth - 40);
+  pdf.text(addressLines, 20, currentY);
+  currentY += addressLines.length * 7;
+
+  pdf.text(`Job Date: ${jobDate}`, 20, currentY);
+  currentY += 12;
+
+  // ===== Unit Table =====
+  const rows = [...unitTableBody.rows].map((r, i) => [
+    i + 1,
     r.cells[1].querySelector('select').value,
     r.cells[2].querySelector('input').value,
     r.cells[3].querySelector('input').value,
     r.cells[4].querySelector('select').value
   ]);
 
-  if(rows.length){
+  if (rows.length) {
     pdf.autoTable({
-      startY,
-      head: [['#','Unit','Location','Date','Work Done']],
+      startY: currentY,
+      head: [['#', 'Unit', 'Location', 'Date', 'Work Done']],
       body: rows,
       theme: 'grid',
-      headStyles: { fillColor: [100, 100, 100] },
+      headStyles: { fillColor: [100, 100, 100], textColor: 255, halign: 'center' },
       bodyStyles: { fontSize: 10 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { halign: 'center', cellWidth: 20 },
+        2: { cellWidth: 60 },
+        3: { halign: 'center', cellWidth: 25 },
+        4: { cellWidth: 50 },
+      },
+      styles: { overflow: 'linebreak' },
     });
+    currentY = pdf.lastAutoTable.finalY + 10;
   }
 
-  // Additional notes
-  const notesY = pdf.lastAutoTable ? pdf.lastAutoTable.finalY + 10 : startY + 10;
-  pdf.text('Additional Notes:', 20, notesY);
-  pdf.text(document.getElementById('additionalNotes').value, 20, notesY + 10);
+  // ===== Additional Notes =====
+  const notes = document.getElementById('additionalNotes').value || '';
+  if (notes.trim()) {
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Additional Notes:', 20, currentY);
+    currentY += 7;
 
-  // Save PDF
+    pdf.setFont(undefined, 'normal');
+    const noteLines = pdf.splitTextToSize(notes, pageWidth - 40);
+    pdf.text(noteLines, 20, currentY);
+  }
+
+  // ===== Save PDF =====
   pdf.save(`JobSheet_${Date.now()}.pdf`);
 };
 
