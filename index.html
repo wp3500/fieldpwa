@@ -536,36 +536,30 @@ document.getElementById('exportPDFBtn').onclick = () => {
   // ===== Job Info =====
   pdf.setFontSize(12);
   pdf.setFont(undefined, 'normal');
-
   const jobNumber = document.getElementById('jobNumber').value || '';
   const amcPO = document.getElementById('amcPO').value || '';
   const address = document.getElementById('address').value || '';
   const jobDate = document.getElementById('jobDate').value || '';
 
-  pdf.text(`Job Number: ${jobNumber}`, 20, currentY);
-  currentY += 7;
-  pdf.text(`AMC PO: ${amcPO}`, 20, currentY);
-  currentY += 7;
-
+  pdf.text(`Job Number: ${jobNumber}`, 20, currentY); currentY += 7;
+  pdf.text(`AMC PO: ${amcPO}`, 20, currentY); currentY += 7;
   const addressLines = pdf.splitTextToSize(`Address: ${address}`, pageWidth - 40);
-  pdf.text(addressLines, 20, currentY);
-  currentY += addressLines.length * 7;
-
-  pdf.text(`Job Date: ${jobDate}`, 20, currentY);
-  currentY += 12;
+  pdf.text(addressLines, 20, currentY); currentY += addressLines.length * 7;
+  pdf.text(`Job Date: ${jobDate}`, 20, currentY); currentY += 12;
 
   // ===== Summaries =====
-  const inventoryText = document.getElementById('inventorySummary').innerText || '';
-  const dueLocationsText = document.getElementById('dueTestLocations').innerText || '';
-  const dueTotalText = document.getElementById('dueTestSummary').innerText || '';
-
   pdf.setFont(undefined, 'bold');
-  pdf.text('Summaries:', 20, currentY);
-  currentY += 7;
-
+  pdf.text('Summaries:', 20, currentY); currentY += 7;
   pdf.setFont(undefined, 'normal');
-  [inventoryText, dueLocationsText, dueTotalText].forEach(txt => {
-    const lines = pdf.splitTextToSize(txt, pageWidth - 40);
+
+  const summaries = [
+    document.getElementById('inventorySummary').innerText,
+    document.getElementById('dueTestLocations').innerText,
+    document.getElementById('dueTestSummary').innerText
+  ];
+
+  summaries.forEach(s => {
+    const lines = pdf.splitTextToSize(s, pageWidth - 40);
     pdf.text(lines, 20, currentY);
     currentY += lines.length * 7;
   });
@@ -593,9 +587,9 @@ document.getElementById('exportPDFBtn').onclick = () => {
         1: { halign: 'center', cellWidth: 20 },
         2: { cellWidth: 60 },
         3: { halign: 'center', cellWidth: 25 },
-        4: { cellWidth: 50 },
+        4: { cellWidth: 50 }
       },
-      styles: { overflow: 'linebreak' },
+      styles: { overflow: 'linebreak' }
     });
     currentY = pdf.lastAutoTable.finalY + 10;
   }
@@ -604,9 +598,7 @@ document.getElementById('exportPDFBtn').onclick = () => {
   const notes = document.getElementById('additionalNotes').value || '';
   if (notes.trim()) {
     pdf.setFont(undefined, 'bold');
-    pdf.text('Additional Notes:', 20, currentY);
-    currentY += 7;
-
+    pdf.text('Additional Notes:', 20, currentY); currentY += 7;
     pdf.setFont(undefined, 'normal');
     const noteLines = pdf.splitTextToSize(notes, pageWidth - 40);
     pdf.text(noteLines, 20, currentY);
@@ -618,7 +610,7 @@ document.getElementById('exportPDFBtn').onclick = () => {
     currentY += 5;
 
     // Logo
-    if (certLogoPreview.src) {
+    if (certLogoPreview.src && certLogoPreview.src.includes('data:image')) {
       const imgProps = pdf.getImageProperties(certLogoPreview.src);
       const imgWidth = 60;
       const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
@@ -628,15 +620,14 @@ document.getElementById('exportPDFBtn').onclick = () => {
 
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(12);
-    pdf.text('Certificate Details:', 20, currentY);
-    currentY += 7;
-
+    pdf.text('Certificate Details:', 20, currentY); currentY += 7;
     pdf.setFont(undefined, 'normal');
+
     const certLines = [
-      `Address: ${certAddress.textContent}`,
-      `Service Date: ${certServiceDate.textContent}`,
-      `Next Service Date: ${certNextServiceDate.textContent}`,
-      `${certQuantities.textContent}`,
+      `Address: ${certAddress.textContent || ''}`,
+      `Service Date: ${certServiceDate.textContent || ''}`,
+      `Next Service Date: ${certNextServiceDate.textContent || ''}`,
+      `${certQuantities.textContent || ''}`,
       `Technician: ${document.getElementById('certTechnician').value || ''}`,
       `Duty of Care: ${document.getElementById('certDutyOfCare').value || ''}`
     ];
