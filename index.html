@@ -569,9 +569,17 @@ document.getElementById('exportPDFBtn').onclick = () => {
   pdf.text(`Job Date: ${jobDate}`, left, y);
   y += lh;
 
-  const addrLines = pdf.splitTextToSize(`Address: ${address}`, usableWidth);
-  pdf.text(addrLines, left, y);
-  y += addrLines.length * lh + sh;
+// Address label
+pdf.setFont(undefined, 'bold');
+pdf.text('Address:', left, y);
+y += lh;
+
+// Address value (starts on next line)
+pdf.setFont(undefined, 'normal');
+const addrLines = pdf.splitTextToSize(address, usableWidth);
+pdf.text(addrLines, left, y);
+y += addrLines.length * lh + sh;
+
 
   /* ===== Summaries (3 columns) ===== */
   pdf.setFontSize(5);
