@@ -537,7 +537,7 @@ document.getElementById('exportPDFBtn').onclick = () => {
   let y = top;
 
   const lh = 4;   // line height
-  const sh = 6;   // section gap
+  const sh = 3;   // section gap
   const hh = 8;   // header height
 
   function needSpace(h) {
@@ -555,7 +555,7 @@ document.getElementById('exportPDFBtn').onclick = () => {
 
   /* ===== Job Info ===== */
   pdf.setFont(undefined, 'normal');
-  pdf.setFontSize(9);
+  pdf.setFontSize(7);
 
   const jobNumber = document.getElementById('jobNumber').value || '';
   const amcPO = document.getElementById('amcPO').value || '';
