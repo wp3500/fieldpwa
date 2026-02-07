@@ -524,49 +524,76 @@ certBtn.onclick=()=>{
 document.getElementById('exportPDFBtn').onclick = () => {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p', 'mm', 'a4');
+
+  /* ===== Layout system ===== */
+  const left = 10;
+  const right = 10;
+  const top = 10;
+
   const pageWidth = pdf.internal.pageSize.getWidth();
-  let currentY = 20;
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const usableWidth = pageWidth - left - right;
 
-  // ===== Title =====
-  pdf.setFontSize(16);
+  let y = top;
+
+  const lh = 4;   // line height
+  const sh = 6;   // section gap
+  const hh = 8;   // header height
+
+  function needSpace(h) {
+    if (y + h > pageHeight - 10) {
+      pdf.addPage();
+      y = top;
+    }
+  }
+
+  /* ===== Title ===== */
   pdf.setFont(undefined, 'bold');
-  pdf.text('Field Service Job Sheet', pageWidth / 2, currentY, { align: 'center' });
-  currentY += 10;
+  pdf.setFontSize(13);
+  pdf.text('Field Service Job Sheet', pageWidth / 2, y, { align: 'center' });
+  y += hh;
 
-  // ===== Job Info =====
-  pdf.setFontSize(12);
+  /* ===== Job Info ===== */
   pdf.setFont(undefined, 'normal');
+  pdf.setFontSize(9);
+
   const jobNumber = document.getElementById('jobNumber').value || '';
   const amcPO = document.getElementById('amcPO').value || '';
   const address = document.getElementById('address').value || '';
   const jobDate = document.getElementById('jobDate').value || '';
 
-  pdf.text(`Job Number: ${jobNumber}`, 20, currentY); currentY += 7;
-  pdf.text(`AMC PO: ${amcPO}`, 20, currentY); currentY += 7;
-  const addressLines = pdf.splitTextToSize(`Address: ${address}`, pageWidth - 40);
-  pdf.text(addressLines, 20, currentY); currentY += addressLines.length * 7;
-  pdf.text(`Job Date: ${jobDate}`, 20, currentY); currentY += 12;
+  pdf.text(`Job No: ${jobNumber}`, left, y);
+  pdf.text(`AMC PO: ${amcPO}`, left + usableWidth / 2, y);
+  y += lh;
 
-  // ===== Summaries =====
-  pdf.setFont(undefined, 'bold');
-  pdf.text('Summaries:', 20, currentY); currentY += 7;
-  pdf.setFont(undefined, 'normal');
+  pdf.text(`Job Date: ${jobDate}`, left, y);
+  y += lh;
 
-  const summaries = [
-    document.getElementById('inventorySummary').innerText,
-    document.getElementById('dueTestLocations').innerText,
-    document.getElementById('dueTestSummary').innerText
-  ];
+  const addrLines = pdf.splitTextToSize(`Address: ${address}`, usableWidth);
+  pdf.text(addrLines, left, y);
+  y += addrLines.length * lh + sh;
 
-  summaries.forEach(s => {
-    const lines = pdf.splitTextToSize(s, pageWidth - 40);
-    pdf.text(lines, 20, currentY);
-    currentY += lines.length * 7;
-  });
-  currentY += 5;
+  /* ===== Summaries (3 columns) ===== */
+  pdf.setFontSize(8);
 
-  // ===== Unit Table =====
-  const rows = [...unitTableBody.rows].map((r, i) => [
+  const colW = usableWidth / 3;
+
+  const invText = document.getElementById('inventorySummary').innerText;
+  const locText = document.getElementById('dueTestLocations').innerText;
+  const dtText = document.getElementById('dueTestSummary').innerText;
+
+  const inv = pdf.splitTextToSize(invText, colW - 2);
+  const locs = pdf.splitTextToSize(locText, colW - 2);
+  const dt = pdf.splitTextToSize(dtText, colW - 2);
+
+  pdf.text(inv, left, y);
+  pdf.text(locs, left + colW, y);
+  pdf.text(dt, left + colW * 2, y);
+
+  y += Math.max(inv.length, locs.length, dt.length) * lh + sh;
+
+  /* ===== Unit Table ===== */
+  const rows = [...document.querySelector('#unitTable tbody').rows].map((r, i) => [
     i + 1,
     r.cells[1].querySelector('select').value,
     r.cells[2].querySelector('input').value,
@@ -576,70 +603,94 @@ document.getElementById('exportPDFBtn').onclick = () => {
 
   if (rows.length) {
     pdf.autoTable({
-      startY: currentY,
-      head: [['#', 'Unit', 'Location', 'Date', 'Work Done']],
+      startY: y,
+      head: [['#', 'Unit', 'Location', 'Date', 'Work']],
       body: rows,
-      theme: 'grid',
-      headStyles: { fillColor: [100, 100, 100], textColor: 255, halign: 'center' },
-      bodyStyles: { fontSize: 10 },
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        1: { halign: 'center', cellWidth: 20 },
-        2: { cellWidth: 60 },
-        3: { halign: 'center', cellWidth: 25 },
-        4: { cellWidth: 50 }
+
+      margin: { left, right },
+
+      styles: {
+        fontSize: 8,
+        cellPadding: 1,
+        lineWidth: 0.1,
+        valign: 'middle'
       },
-      styles: { overflow: 'linebreak' }
+
+      headStyles: {
+        fillColor: [200, 200, 200],
+        textColor: 0,
+        fontSize: 8,
+        cellPadding: 1
+      },
+
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 14, halign: 'center' },
+        2: { cellWidth: 60 },
+        3: { cellWidth: 18, halign: 'center' },
+        4: { cellWidth: usableWidth - (8 + 14 + 60 + 18) }
+      }
     });
-    currentY = pdf.lastAutoTable.finalY + 10;
+
+    y = pdf.lastAutoTable.finalY + sh;
   }
 
-  // ===== Additional Notes =====
+  /* ===== Notes ===== */
   const notes = document.getElementById('additionalNotes').value || '';
   if (notes.trim()) {
+    needSpace(20);
+
     pdf.setFont(undefined, 'bold');
-    pdf.text('Additional Notes:', 20, currentY); currentY += 7;
+    pdf.setFontSize(9);
+    pdf.text('Notes:', left, y);
+    y += lh;
+
     pdf.setFont(undefined, 'normal');
-    const noteLines = pdf.splitTextToSize(notes, pageWidth - 40);
-    pdf.text(noteLines, 20, currentY);
-    currentY += noteLines.length * 7 + 5;
+    const noteLines = pdf.splitTextToSize(notes, usableWidth);
+    pdf.text(noteLines, left, y);
+    y += noteLines.length * lh + sh;
   }
 
-  // ===== Cert Page =====
+  /* ===== Certificate (new page) ===== */
+  const certPage = document.getElementById('certPage');
   if (certPage.style.display === 'flex') {
-    currentY += 5;
+    pdf.addPage();
+    y = top;
 
-    // Logo
-    if (certLogoPreview.src && certLogoPreview.src.includes('data:image')) {
-      const imgProps = pdf.getImageProperties(certLogoPreview.src);
-      const imgWidth = 60;
-      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-      pdf.addImage(certLogoPreview.src, 'PNG', (pageWidth - imgWidth) / 2, currentY, imgWidth, imgHeight);
-      currentY += imgHeight + 5;
+    const logo = document.getElementById('certLogoPreview');
+    if (logo.src && logo.src.includes('data:image')) {
+      const imgProps = pdf.getImageProperties(logo.src);
+      const imgW = 50;
+      const imgH = (imgProps.height * imgW) / imgProps.width;
+      pdf.addImage(logo.src, 'PNG', (pageWidth - imgW) / 2, y, imgW, imgH);
+      y += imgH + sh;
     }
 
     pdf.setFont(undefined, 'bold');
-    pdf.setFontSize(12);
-    pdf.text('Certificate Details:', 20, currentY); currentY += 7;
+    pdf.setFontSize(11);
+    pdf.text('Certificate of Service', pageWidth / 2, y, { align: 'center' });
+    y += hh;
+
     pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(9);
 
     const certLines = [
-      `Address: ${certAddress.textContent || ''}`,
-      `Service Date: ${certServiceDate.textContent || ''}`,
-      `Next Service Date: ${certNextServiceDate.textContent || ''}`,
-      `${certQuantities.textContent || ''}`,
+      `Address: ${document.getElementById('certAddress').textContent || ''}`,
+      `Service Date: ${document.getElementById('certServiceDate').textContent || ''}`,
+      `Next Service Date: ${document.getElementById('certNextServiceDate').textContent || ''}`,
+      document.getElementById('certQuantities').textContent || '',
       `Technician: ${document.getElementById('certTechnician').value || ''}`,
       `Duty of Care: ${document.getElementById('certDutyOfCare').value || ''}`
     ];
 
     certLines.forEach(line => {
-      const wrapped = pdf.splitTextToSize(line, pageWidth - 40);
-      pdf.text(wrapped, 20, currentY);
-      currentY += wrapped.length * 7;
+      const wrapped = pdf.splitTextToSize(line, usableWidth);
+      pdf.text(wrapped, left, y);
+      y += wrapped.length * lh + 1;
     });
   }
 
-  // ===== Save PDF =====
+  /* ===== Save ===== */
   pdf.save(`JobSheet_${Date.now()}.pdf`);
 };
 
