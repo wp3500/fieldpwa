@@ -4,10 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Field Service Job Sheet</title>
+<title>Field Service Job Sheet + Jobs of the Month</title>
 
 <link rel="manifest" href="manifest.json">
-
 
 <style>
 /* ===== Global Styles ===== */
@@ -56,7 +55,13 @@ textarea{resize:none;overflow:hidden}
 
 /* ===== Landing ===== */
 #landing{display:flex;flex-direction:column;gap:6px}
-#landing button{width:100%}
+#landing button {
+    width: 100%;          /* keep full width */
+    padding: 16px 10px;   /* taller vertical padding (top/bottom = 16px, left/right = 10px) */
+    font-size: 16px;      /* bigger text */
+    border-radius: 8px;   /* optional: slightly rounder edges */
+}
+
 
 /* ===== Job Sheet ===== */
 #jobSheet{display:none;flex-direction:column;gap:6px}
@@ -169,6 +174,24 @@ table{font-size:8.5pt!important}
 select.unit-input{appearance:none;-webkit-appearance:none;-moz-appearance:none}
 }
 
+/* ===== Jobs of the Month Page ===== */
+#jobsOfMonthPage{display:none;flex-direction:column;gap:6px;background:#f7f7f7;padding:10px;}
+#jobsOfMonthPage table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+#jobsOfMonthPage th, #jobsOfMonthPage td{border:1px solid #ddd;padding:5px;text-align:left;vertical-align:middle;}
+#jobsOfMonthPage th{background:#eee;font-weight:normal;}
+#jobsOfMonthPage input[type="text"]{width:100%;padding:4px;font-size:14px;}
+#jobsOfMonthPage input[type="checkbox"]{width:20px;height:20px;}
+#jobsOfMonthPage .tick{width:25px;text-align:center;}
+#jobsOfMonthPage .customer{width:55%;}
+#jobsOfMonthPage .location{width:35%;}
+#jobsOfMonthPage .dtunits{width:30px;text-align:center;cursor:pointer;}
+#jobsOfMonthPage .dtunits:hover{background:#ffe5e5;}
+#jobsOfMonthPage tr{height:35px;}
+#jobsOfMonthPage .controls{margin-top:10px;display:flex;justify-content:space-between;}
+#jobsOfMonthPage #dtPopup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border:1px solid #ccc;padding:10px;z-index:1000;width:80%;max-width:400px;box-shadow:0 2px 10px rgba(0,0,0,0.2);}
+#jobsOfMonthPage #dtPopup textarea{width:100%;height:150px;font-size:14px;}
+#jobsOfMonthPage #dtPopup button{margin-top:10px;width:100%;}
+#jobsOfMonthPage #overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;}
 </style>
 </head>
 
@@ -177,110 +200,137 @@ select.unit-input{appearance:none;-webkit-appearance:none;-moz-appearance:none}
 <script src="jspdf.umd.min.js"></script>
 <script src="jspdf.plugin.autotable.min.js"></script>
 
-
 <div id="saveNotification">Saved</div>
 
 <div class="container">
 
-<!-- Landing -->
+<!-- ===== Landing ===== -->
 <div id="landing">
-<button id="createSheetBtn">Create Job Sheet</button>
-<button id="savedSheetsBtn">Saved Job Sheets</button>
+  <button id="createSheetBtn">Create Job Sheet</button>
+  <button id="savedSheetsBtn">Saved Job Sheets</button>
+  <button id="jobsOfMonthBtn">Jobs of the Month</button>
 </div>
 
-<!-- Job Sheet -->
+<!-- ===== Job Sheet ===== -->
 <div id="jobSheet">
-<button class="back-btn" id="backToLanding1">← Back</button>
-
-<div class="box" id="topFields">
-<textarea id="address" placeholder="Address"></textarea>
-<div id="jobMeta">
-<input id="jobNumber" placeholder="Job Number" />
-<input id="amcPO" placeholder="AMC PO" />
-</div>
-<div class="form-group">
-  <label for="jobDate">Job Date</label>
-  <input type="date" id="jobDate" class="input-field" placeholder="Select Job Date">
-</div>
-</div>
-
-<div class="box" id="summaries">
-  <div id="summaryRow">
-    <div id="inventorySummary">Inventory Summary</div>
-    <div id="dueTestLocations">Due Test Locations</div>
-    <div id="dueTestSummary">DT Total</div>
+  <button class="back-btn" id="backToLanding1">← Back</button>
+  <div class="box" id="topFields">
+    <textarea id="address" placeholder="Address"></textarea>
+    <div id="jobMeta">
+      <input id="jobNumber" placeholder="Job Number" />
+      <input id="amcPO" placeholder="AMC PO" />
+    </div>
+    <div class="form-group">
+      <label for="jobDate">Job Date</label>
+      <input type="date" id="jobDate" class="input-field" placeholder="Select Job Date">
+    </div>
   </div>
-
-  <div id="notes">
-    <textarea id="additionalNotes" placeholder="Additional Notes"></textarea>
+  <div class="box" id="summaries">
+    <div id="summaryRow">
+      <div id="inventorySummary">Inventory Summary</div>
+      <div id="dueTestLocations">Due Test Locations</div>
+      <div id="dueTestSummary">DT Total</div>
+    </div>
+    <div id="notes">
+      <textarea id="additionalNotes" placeholder="Additional Notes"></textarea>
+    </div>
   </div>
-</div>
-
-<div class="box" id="unitLocationsSection">
-<table id="unitTable">
-<thead>
-<tr><th>#</th><th>Unit</th><th>Location</th><th>Date</th><th>Work Done</th><th>Action</th></tr>
-</thead>
-<tbody></tbody>
-</table>
-<button class="add-row-btn" id="addRowBtn">Add Row</button>
-</div>
-
-<button id="saveSheetBtn">Save Job Sheet</button>
-<button id="exportPDFBtn">Export to PDF</button>
-<button id="certBtn">Cert</button>
-
-<!-- Cert Page -->
-<div id="certPage">
-  <div class="cert-section">
-    <label>Company Logo:</label>
-    <input type="file" id="certLogoUpload" accept="image/*">
-    <img id="certLogoPreview" src="" alt="Logo Preview">
+  <div class="box" id="unitLocationsSection">
+    <table id="unitTable">
+      <thead>
+        <tr><th>#</th><th>Unit</th><th>Location</th><th>Date</th><th>Work Done</th><th>Action</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button class="add-row-btn" id="addRowBtn">Add Row</button>
   </div>
-  <div class="cert-section">
-    <label>Address:</label>
-    <div id="certAddress"></div>
-    <label>Date of Service:</label>
-    <div id="certServiceDate"></div>
-    <label>Next Service Date:</label>
-    <div id="certNextServiceDate"></div>
-  </div>
-  <div class="cert-section">
-    <div id="certQuantities">Extinguishers: 0 / FB: 0</div>
-  </div>
-  <div class="cert-section">
-    <label>Technician:</label>
-    <input type="text" id="certTechnician">
-    <label>Duty of Care:</label>
-    <textarea id="certDutyOfCare" rows="3"></textarea>
+  <button id="saveSheetBtn">Save Job Sheet</button>
+  <button id="exportPDFBtn">Export to PDF</button>
+  <button id="certBtn">Cert</button>
+
+  <!-- Cert Page -->
+  <div id="certPage">
+    <div class="cert-section">
+      <label>Company Logo:</label>
+      <input type="file" id="certLogoUpload" accept="image/*">
+      <img id="certLogoPreview" src="" alt="Logo Preview">
+    </div>
+    <div class="cert-section">
+      <label>Address:</label>
+      <div id="certAddress"></div>
+      <label>Date of Service:</label>
+      <div id="certServiceDate"></div>
+      <label>Next Service Date:</label>
+      <div id="certNextServiceDate"></div>
+    </div>
+    <div class="cert-section">
+      <div id="certQuantities">Extinguishers: 0 / FB: 0</div>
+    </div>
+    <div class="cert-section">
+      <label>Technician:</label>
+      <input type="text" id="certTechnician">
+      <label>Duty of Care:</label>
+      <textarea id="certDutyOfCare" rows="3"></textarea>
+    </div>
   </div>
 </div>
 
-</div>
-
-<!-- Saved Sheets -->
+<!-- ===== Saved Sheets ===== -->
 <div id="savedSheets">
-<button class="back-btn" id="backToLanding2">← Back</button>
-<div id="savedList"></div>
+  <button class="back-btn" id="backToLanding2">← Back</button>
+  <div id="savedList"></div>
+</div>
+
+<!-- ===== Jobs of the Month Page ===== -->
+<div id="jobsOfMonthPage">
+  <button class="back-btn" id="backFromJobsMonth">← Back</button>
+
+  <h2 style="font-size:16px;">Jobs To Be Done</h2>
+  <table id="jobsTable">
+    <thead>
+      <tr><th class="tick"></th><th class="customer">Customer</th><th class="location">Location</th><th class="dtunits">DT</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2 style="font-size:16px;">Completed Jobs</h2>
+  <table id="completedTable">
+    <thead>
+      <tr><th class="tick"></th><th class="customer">Customer</th><th class="location">Location</th><th class="dtunits">DT</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="controls">
+    <button onclick="addRowJobs()">Add Row</button>
+    <button onclick="deleteRowJobs()">Delete Row</button>
+    <button onclick="exportPDFJobs()">Export PDF</button>
+  </div>
+
+  <div id="overlay"></div>
+  <div id="dtPopup">
+    <textarea id="dtInput" placeholder="Enter DT units..."></textarea>
+    <button onclick="saveDT()">Save</button>
+  </div>
 </div>
 
 </div>
 
 <script>
-/* ===== Navigation ===== */
-const landing=document.getElementById('landing');
-const jobSheet=document.getElementById('jobSheet');
-const savedSheetsPage=document.getElementById('savedSheets');
-const createSheetBtn=document.getElementById('createSheetBtn');
-const savedSheetsBtn=document.getElementById('savedSheetsBtn');
-const backToLanding1=document.getElementById('backToLanding1');
-const backToLanding2=document.getElementById('backToLanding2');
+/* ===== NAVIGATION ===== */
+const landing = document.getElementById('landing');
+const jobSheet = document.getElementById('jobSheet');
+const savedSheetsPage = document.getElementById('savedSheets');
+const jobsOfMonthPage = document.getElementById('jobsOfMonthPage');
 
-createSheetBtn.onclick=()=>{landing.style.display='none';jobSheet.style.display='flex'};
-savedSheetsBtn.onclick=()=>{landing.style.display='none';savedSheetsPage.style.display='flex';renderSavedSheets()};
-backToLanding1.onclick=()=>{jobSheet.style.display='none';landing.style.display='flex'};
-backToLanding2.onclick=()=>{savedSheetsPage.style.display='none';landing.style.display='flex'};
+document.getElementById('createSheetBtn').onclick = () => { landing.style.display='none'; jobSheet.style.display='flex'; };
+document.getElementById('savedSheetsBtn').onclick = () => { landing.style.display='none'; savedSheetsPage.style.display='flex'; renderSavedSheets(); };
+document.getElementById('jobsOfMonthBtn').onclick = () => { landing.style.display='none'; jobsOfMonthPage.style.display='flex'; loadFromLocalStorageJobs(); };
+document.getElementById('backToLanding1').onclick = () => { jobSheet.style.display='none'; landing.style.display='flex'; };
+document.getElementById('backToLanding2').onclick = () => { savedSheetsPage.style.display='none'; landing.style.display='flex'; };
+document.getElementById('backFromJobsMonth').onclick = () => { jobsOfMonthPage.style.display='none'; landing.style.display='flex'; };
 
+/* ===== FULL JOB SHEET JS ===== */
 /* ===== Auto-resize Textareas ===== */
 const addressTA=document.getElementById('address');
 const notesTA=document.getElementById('additionalNotes');
@@ -536,9 +586,9 @@ document.getElementById('exportPDFBtn').onclick = () => {
 
   let y = top;
 
-  const lh = 4;   // line height
-  const sh = 6;   // section gap
-  const hh = 8;   // header height
+  const lh = 2.5;   // line height
+  const sh = 2.9;   // section gap
+  const hh = 4;   // header height
 
   function needSpace(h) {
     if (y + h > pageHeight - 10) {
@@ -555,23 +605,41 @@ document.getElementById('exportPDFBtn').onclick = () => {
 
   /* ===== Job Info ===== */
   pdf.setFont(undefined, 'normal');
-  pdf.setFontSize(7);
+  pdf.setFontSize(6);
 
-  const jobNumber = document.getElementById('jobNumber').value || '';
-  const amcPO = document.getElementById('amcPO').value || '';
-  const address = document.getElementById('address').value || '';
-  const jobDate = document.getElementById('jobDate').value || '';
+const jobNumber = document.getElementById('jobNumber').value || '';
+const amcPO = document.getElementById('amcPO').value || '';
+const address = document.getElementById('address').value || '';
+const jobDate = document.getElementById('jobDate').value || '';
 
-  pdf.text(`Job No: ${jobNumber}`, left, y);
-  pdf.text(`AMC PO: ${amcPO}`, left + usableWidth / 2, y);
-  y += lh;
 
-  pdf.text(`Job Date: ${jobDate}`, left, y);
-  y += lh;
+// Job No
+const jobNoLines = pdf.splitTextToSize(`Job No: ${jobNumber}`, usableWidth);
+pdf.text(jobNoLines, left, y);
+y += jobNoLines.length * lh;
 
-const addrLines = pdf.splitTextToSize(`Address: ${address}`, usableWidth);
+// AMC PO
+const amcLines = pdf.splitTextToSize(`AMC PO: ${amcPO}`, usableWidth);
+pdf.text(amcLines, left, y);
+y += amcLines.length * lh;
+
+// Job Date
+const dateLines = pdf.splitTextToSize(`Job Date: ${jobDate}`, usableWidth);
+pdf.text(dateLines, left, y);
+y += dateLines.length * lh;
+
+// Address
+pdf.setFont("helvetica", "bold");
+pdf.text("Address:", left, y);
+y += lh;
+
+pdf.setFont("helvetica", "normal");
+const addrLines = pdf.splitTextToSize(address, usableWidth);
 pdf.text(addrLines, left, y);
 y += addrLines.length * lh + sh;
+
+
+
 
 
   /* ===== Summaries (3 columns) ===== */
@@ -702,7 +770,50 @@ y += addrLines.length * lh + sh;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./service-worker.js');
 }
-</script>
 
+
+/* ===== JOBS OF THE MONTH JS ===== */
+let currentDTCell = null;
+function saveDT() { if(currentDTCell){ currentDTCell.dataset.dt=document.getElementById('dtInput').value; currentDTCell.style.backgroundColor=currentDTCell.dataset.dt?'red':''; saveToLocalStorageJobs(); closeDTPopup(); } }
+function closeDTPopup(){document.getElementById('overlay').style.display='none';document.getElementById('dtPopup').style.display='none';}
+document.getElementById('overlay').addEventListener('click', closeDTPopup);
+
+function createBaseRowJobs(){
+  const tr = document.createElement('tr');
+  const tdTick = document.createElement('td'); tdTick.className='tick'; const cb=document.createElement('input'); cb.type='checkbox'; tdTick.appendChild(cb); tr.appendChild(tdTick);
+  cb.addEventListener('change',()=>{ const todo=document.querySelector('#jobsTable tbody'); const done=document.querySelector('#completedTable tbody'); cb.checked?done.appendChild(tr):todo.appendChild(tr); saveToLocalStorageJobs(); });
+  const tdCustomer=document.createElement('td'); tdCustomer.className='customer'; const cinput=document.createElement('input'); cinput.type='text'; cinput.addEventListener('input',saveToLocalStorageJobs); tdCustomer.appendChild(cinput); tr.appendChild(tdCustomer);
+  const tdLocation=document.createElement('td'); tdLocation.className='location'; const linput=document.createElement('input'); linput.type='text'; linput.addEventListener('input',saveToLocalStorageJobs); tdLocation.appendChild(linput); tr.appendChild(tdLocation);
+  const tdDT=document.createElement('td'); tdDT.className='dtunits'; tdDT.addEventListener('click',()=>openDTPopupJobs(tdDT)); tr.appendChild(tdDT);
+  return tr;
+}
+function addRowJobs(){ document.querySelector('#jobsTable tbody').appendChild(createBaseRowJobs()); saveToLocalStorageJobs(); }
+function deleteRowJobs(){ const tbody=document.querySelector('#jobsTable tbody'); if(tbody.rows.length>0) tbody.deleteRow(-1); saveToLocalStorageJobs(); }
+function openDTPopupJobs(cell){ currentDTCell=cell; document.getElementById('dtInput').value=cell.dataset.dt||''; document.getElementById('overlay').style.display='block'; document.getElementById('dtPopup').style.display='block'; }
+function saveToLocalStorageJobs(){
+  const data={todo:[],completed:[]};
+  function extractRows(tbody){ return Array.from(tbody.rows).map(tr=>({checked:tr.querySelector('.tick input').checked, customer:tr.querySelector('.customer input').value, location:tr.querySelector('.location input').value, dt:tr.querySelector('.dtunits').dataset.dt||'' })); }
+  data.todo=extractRows(document.querySelector('#jobsTable tbody'));
+  data.completed=extractRows(document.querySelector('#completedTable tbody'));
+  localStorage.setItem('jobsData',JSON.stringify(data));
+}
+function loadFromLocalStorageJobs(){
+  const saved=localStorage.getItem('jobsData'); if(!saved)return; const data=JSON.parse(saved);
+  function createRow(rowData,tbody){ const tr=createBaseRowJobs(); tr.querySelector('.tick input').checked=rowData.checked; tr.querySelector('.customer input').value=rowData.customer; tr.querySelector('.location input').value=rowData.location; tr.querySelector('.dtunits').dataset.dt=rowData.dt; if(rowData.dt) tr.querySelector('.dtunits').style.backgroundColor='red'; tbody.appendChild(tr); }
+  const todoBody=document.querySelector('#jobsTable tbody'); const completedBody=document.querySelector('#completedTable tbody');
+  data.todo.forEach(r=>createRow(r,todoBody)); data.completed.forEach(r=>createRow(r,completedBody));
+}
+function exportPDFJobs(){
+  if(!window.jspdf||!window.jspdf.jsPDF){alert('PDF library not loaded.');return;}
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  const tables=[{title:'Jobs To Be Done',tbody:document.querySelector('#jobsTable tbody')},{title:'Completed Jobs',tbody:document.querySelector('#completedTable tbody')}];
+  let yOffset=10;
+  tables.forEach(tbl=>{
+    const rows=[]; tbl.tbody.querySelectorAll('tr').forEach(tr=>{rows.push([tr.querySelector('.tick input').checked?'✔':'',tr.querySelector('.customer input').value,tr.querySelector('.location input').value,tr.querySelector('.dtunits').dataset.dt||'']);});
+    if(rows.length>0){ doc.text(tbl.title,10,yOffset); doc.autoTable({startY:yOffset+4,head:[['Tick','Customer','Location','DT Units']],body:rows}); yOffset=doc.lastAutoTable.finalY+10; }
+  });
+  doc.save('jobs.pdf');
+}
+</script>
 </body>
 </html>
