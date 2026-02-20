@@ -720,44 +720,67 @@ y += addrLines.length * lh + sh;
     y += noteLines.length * lh + sh;
   }
 
-  /* ===== Certificate (new page) ===== */
-  const certPage = document.getElementById('certPage');
-  if (certPage.style.display === 'flex') {
-    pdf.addPage();
-    y = top;
+/* ===== Certificate (new page) ===== */
+const certPage = document.getElementById('certPage');
+if (certPage.style.display === 'flex') {
+  pdf.addPage();
+  y = top;
 
-    const logo = document.getElementById('certLogoPreview');
-    if (logo.src && logo.src.includes('data:image')) {
-      const imgProps = pdf.getImageProperties(logo.src);
-      const imgW = 50;
-      const imgH = (imgProps.height * imgW) / imgProps.width;
-      pdf.addImage(logo.src, 'PNG', (pageWidth - imgW) / 2, y, imgW, imgH);
-      y += imgH + sh;
-    }
+  // ===== Logo =====
+  const logo = document.getElementById('certLogoPreview');
+  if (logo.src && logo.src.includes('data:image')) {
+    const imgProps = pdf.getImageProperties(logo.src);
+    const imgW = 130;
+    const imgH = (imgProps.height * imgW) / imgProps.width;
+    pdf.addImage(logo.src, 'PNG', (pageWidth - imgW) / 2, y, imgW, imgH);
+    y += imgH + 10; // spacing below logo
+  }
 
-    pdf.setFont(undefined, 'bold');
-    pdf.setFontSize(11);
-    pdf.text('Certificate of Service', pageWidth / 2, y, { align: 'center' });
-    y += hh;
+  pdf.setFont(undefined, 'bold');
+  pdf.setFontSize(9);
 
-    pdf.setFont(undefined, 'normal');
-    pdf.setFontSize(9);
+  // ===== Certificate Info =====
+  const certNo = document.getElementById('jobNumber').value || '';
+  const serviceDate = document.getElementById('certServiceDate').textContent || '';
+  const nextService = document.getElementById('certNextServiceDate').textContent || '';
+  const quantities = document.getElementById('certQuantities').textContent || '';
+  const addressText = document.getElementById('certAddress').textContent || '';
+  const technician = document.getElementById('certTechnician').value || '';
+  const dutyOfCare = `DUTY OF CARE WASTE TRANSFER NOTE: By signing, the customer hereby authorises Anderson Fire to dispose of extinguishers to be removed the customers site, through an authorised waste disposal agent. Anderson Fire have serviced the portable fire extinguishers and other fire protection equipment within the premises identified above in accordance with the requirements and frequencies indicated by BS5306 PART 3 and refilled when required in accordance with BS6643 Part 1. Where dry powder extinguishers are installed the customer accepts responsibility for any secondary damage caused to people and processes. According to BS5306 part 3, it is the duty of the responsible person in the premises to inspect extinguishers at monthly intervals.`;
 
-    const certLines = [
-      `Address: ${document.getElementById('certAddress').textContent || ''}`,
-      `Service Date: ${document.getElementById('certServiceDate').textContent || ''}`,
-      `Next Service Date: ${document.getElementById('certNextServiceDate').textContent || ''}`,
-      document.getElementById('certQuantities').textContent || '',
-      `Technician: ${document.getElementById('certTechnician').value || ''}`,
-      `Duty of Care: ${document.getElementById('certDutyOfCare').value || ''}`
-    ];
+  const centerX = pageWidth / 2;
 
-    certLines.forEach(line => {
-      const wrapped = pdf.splitTextToSize(line, usableWidth);
-      pdf.text(wrapped, left, y);
-      y += wrapped.length * lh + 1;
+  function addLine(text, fontSize = 9, bold = false, spacing = 7) {
+    pdf.setFont(undefined, bold ? 'bold' : 'normal');
+    pdf.setFontSize(fontSize);
+    const lines = pdf.splitTextToSize(text, pageWidth - 20);
+    lines.forEach(line => {
+      pdf.text(line, centerX, y, { align: 'center' });
+      y += spacing;
     });
   }
+
+  addLine(`Cert No: ${certNo}`);
+  addLine(`Date of Service: ${serviceDate}`);
+  addLine(`Next Service Date: ${nextService}`);
+ // Get the raw quantities text (e.g., "Extinguishers: 10 / FB: 2")
+const quantitiesText = document.getElementById('certQuantities').textContent || '';
+
+// Replace the abbreviations with full names
+let updatedQuantities = quantitiesText.replace(/FB/, 'Fire Blankets');
+updatedQuantities = updatedQuantities.replace(/Extinguishers/, 'Fire Extinguishers');
+
+// Print it centered
+addLine(updatedQuantities);
+  addLine(''); // extra space
+  addLine('Address:', 9, true, 6); // bold title
+ addressText.split('\n').forEach(line => addLine(line, 9, false, 4));
+  addLine(''); // extra space
+  addLine(`Technician: ${technician}`);
+  addLine(''); // extra space
+const dutyY = pdf.internal.pageSize.getHeight() - 50; // 50 units from bottom
+addLine(dutyOfCare, 7, false, 5, dutyY);
+}
 
   /* ===== Save ===== */
   pdf.save(`JobSheet_${Date.now()}.pdf`);
