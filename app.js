@@ -373,6 +373,7 @@ y += lh + 2; // add a little spacing before the next section
       startY:y,
       head:[['#','Unit','Location','Date','Work']],
       body:rows,
+      theme: "grid",
       margin:{left,right},
       styles:{fontSize:5,cellPadding:1,lineWidth:0.1,valign:'middle'},
       headStyles:{fillColor:[200,200,200],textColor:0,fontSize:5,cellPadding:1},
