@@ -5,6 +5,8 @@ const FILES_TO_CACHE = [
   './index.html',
   './style.css',
   './app.js',
+  './Logo1.png',
+  './Logo2.png',
   './manifest.json',
 
   // Libraries
