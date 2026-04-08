@@ -477,7 +477,7 @@ function doExportPDF() {
   const jobDate=document.getElementById('jobDate').value||'';
 
   pdf.text(pdf.splitTextToSize(`Job No: ${jobNumber}`, usableWidth), left, y); y+=lh;
-  pdf.text(pdf.splitTextToSize(`Scutum PO: ${amcPO}`, usableWidth), left, y); y+=lh;
+  pdf.text(pdf.splitTextToSize(`Scutum PO: ${PO}`, usableWidth), left, y); y+=lh;
   pdf.text(pdf.splitTextToSize(`Job Date: ${jobDate}`, usableWidth), left, y); y+=lh;
 
   pdf.setFont('helvetica','bold'); pdf.text('Address:', left, y); y+=lh;
